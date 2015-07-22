@@ -44,11 +44,11 @@ import org.compiere.util.Trx;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
-import org.zkoss.zkex.zul.Borderlayout;
-import org.zkoss.zkex.zul.Center;
-import org.zkoss.zkex.zul.North;
-import org.zkoss.zkex.zul.South;
+import org.zkoss.zul.Borderlayout;
+import org.zkoss.zul.Center;
 import org.zkoss.zul.Checkbox;
+import org.zkoss.zul.North;
+import org.zkoss.zul.South;
 import org.zkoss.zul.Tree;
 import org.zkoss.zul.Treecell;
 import org.zkoss.zul.Treechildren;
@@ -58,10 +58,10 @@ import org.zkoss.zul.Treeitem;
 import org.zkoss.zul.Treerow;
 
 
-public class WDelete implements IFormController,EventListener, ValueChangeListener{
+public class WDelete implements IFormController,EventListener<Event>, ValueChangeListener{
 	
 	/**
-	 * 
+	 *  
 	 */
 	private static CLogger log = CLogger.getCLogger(WDelete.class);
 	private CustomForm form = new CustomForm();
@@ -130,8 +130,10 @@ public class WDelete implements IFormController,EventListener, ValueChangeListen
 		rows = parameterLayout.newRows();
 		row = rows.newRow();
 		row.appendChild(clientLabel.rightAlign());
+		clientPick.setHflex("true");
 		row.appendChild(clientPick);
 		row.appendChild(tableLabel.rightAlign());
+		tablePick.getComponent().setHflex("true");
 		row.appendChild(tablePick.getComponent());
 		row.appendChild(dryRun);
 		
@@ -142,6 +144,7 @@ public class WDelete implements IFormController,EventListener, ValueChangeListen
 		center.setStyle("border: none");
 		center.appendChild(centerPanel);
 		tree = new Tree();
+		tree.setHflex("true");
 		treeCols = new Treecols();
 		treeCol = new Treecol("");
 		treeCol2 = new Treecol();
@@ -149,7 +152,7 @@ public class WDelete implements IFormController,EventListener, ValueChangeListen
 		treeCols.appendChild(treeCol);
 		treeCols.appendChild(treeCol2);
         tree.appendChild(treeCols); 		
-		center.setFlex(true);
+		//center.setFlex(true);
 		center.setAutoscroll(true);
 		
 		South south = new South();
@@ -228,11 +231,12 @@ public class WDelete implements IFormController,EventListener, ValueChangeListen
 				+ " AND t.TableName NOT IN ('C_TaxDeclarationAcct',?)"     // not the same table
 				+ " AND ("
 				+ "(c.ColumnName=? AND c.IsKey='N' AND c.ColumnSQL IS NULL)"		//	#1 - direct
-			+ " OR "
-				+ "c.AD_Reference_Value_ID IN "				//	Table Reference
-					+ "(SELECT rt.AD_Reference_ID FROM AD_Ref_Table rt"
-					+ " INNER JOIN AD_Table tt ON (rt.AD_Table_ID=tt.AD_Table_ID)" +
-							" WHERE tt.TableName = ? ) "	//	#2
+				// FIXME: workaround to avoid errors related to Asset tables
+//			+ " OR "
+//				+ "c.AD_Reference_Value_ID IN "				//	Table Reference
+//					+ "(SELECT rt.AD_Reference_ID FROM AD_Ref_Table rt"
+//					+ " INNER JOIN AD_Table tt ON (rt.AD_Table_ID=tt.AD_Table_ID)" +
+//							" WHERE tt.TableName = ? ) "	//	#2
 			+ ") "
 			+ "ORDER BY t.LoadSeq DESC";
 		PreparedStatement pstmt = null;
@@ -244,7 +248,7 @@ public class WDelete implements IFormController,EventListener, ValueChangeListen
 			pstmt = DB.prepareStatement(sql, null);
 			pstmt.setString(1, currentNode.tableName);
 			pstmt.setString(2, keyCol);
-			pstmt.setString(3, currentNode.tableName);
+//			pstmt.setString(3, currentNode.tableName);
 			rs = pstmt.executeQuery();
 			
 			while (rs.next())
