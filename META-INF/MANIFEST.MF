@@ -4,13 +4,13 @@ Bundle-Name: DeleteEntities
 Bundle-SymbolicName: de.action42.idempiere.deleteEntities;singleton:=true
 Bundle-Version: 2.1.0.20150722
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
-Require-Bundle: org.adempiere.ui.zk;resolution:=optional,
+Require-Bundle: org.adempiere.base,
+ org.adempiere.plugin.utils,
  org.zkoss.zk.library;resolution:=optional,
- org.adempiere.base,
- org.adempiere.ui.swing;resolution:=optional,
- org.adempiere.plugin.utils;bundle-version="2.1.0"
+ org.adempiere.ui.zk;resolution:=optional,
+ org.adempiere.ui.swing;resolution:=optional
 Bundle-ClassPath: lib/lablib-checkboxtree-3.3.jar,
  lib/zkex-3.6.3.jar,
  .
 Bundle-Activator: org.adempiere.plugin.utils.AdempiereActivator
-Service-Component: OSGI-INF/deleteentitiesswingformfactory.xml
+Service-Component: OSGI-INF/*.xml

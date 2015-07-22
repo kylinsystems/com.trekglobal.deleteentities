@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0" name="de.action42.idempiere.deleteEntities">
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0" enabled="true" name="de.action42.idempiere.deleteEntitiesSwing">
    <implementation class="de.action42.idempiere.deleteEntities.factory.MySwingFormFactory"/>
    <service>
       <provide interface="org.adempiere.ui.swing.factory.IFormFactory"/>
