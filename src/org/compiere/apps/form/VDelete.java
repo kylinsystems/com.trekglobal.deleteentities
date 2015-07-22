@@ -123,8 +123,6 @@ public class VDelete extends CPanel
 		
 		HashSet<String> tablesIgnored = new HashSet<String>(Arrays.asList(new String[] {
 				"T_Report", "T_ReportStatement", "AD_Attribute_Value", "AD_PInstance_Log", "A_Valid_Asset_Combinations"
-				// FIXME: workaround to avoid errors related to Asset tables
-				, "A_Asset_Addition", "A_Asset_Split"
 		}));
 
 		if ( tablesIgnored.contains(currentNode.tableName) )
@@ -141,9 +139,10 @@ public class VDelete extends CPanel
 				+ "(c.ColumnName=? AND c.IsKey='N' AND c.ColumnSQL IS NULL)"		//	#1 - direct
 			+ " OR "
 				+ "c.AD_Reference_Value_ID IN "				//	Table Reference
-					+ "(SELECT rt.AD_Reference_ID FROM AD_Ref_Table rt"
-					+ " INNER JOIN AD_Table tt ON (rt.AD_Table_ID=tt.AD_Table_ID)" +
-							" WHERE tt.TableName = ? ) "	//	#2
+				// FIXME: workaround to avoid errors related to Asset tables
+//					+ "(SELECT rt.AD_Reference_ID FROM AD_Ref_Table rt"
+//					+ " INNER JOIN AD_Table tt ON (rt.AD_Table_ID=tt.AD_Table_ID)" +
+//							" WHERE tt.TableName = ? ) "	//	#2
 			+ ") "
 			+ "ORDER BY t.LoadSeq DESC";
 		PreparedStatement pstmt = null;
@@ -155,7 +154,7 @@ public class VDelete extends CPanel
 			pstmt = DB.prepareStatement(sql, null);
 			pstmt.setString(1, currentNode.tableName);
 			pstmt.setString(2, keyCol);
-			pstmt.setString(3, currentNode.tableName);
+//			pstmt.setString(3, currentNode.tableName);
 			rs = pstmt.executeQuery();
 			while (rs.next())
 			{
