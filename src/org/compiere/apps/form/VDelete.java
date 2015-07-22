@@ -123,6 +123,8 @@ public class VDelete extends CPanel
 		
 		HashSet<String> tablesIgnored = new HashSet<String>(Arrays.asList(new String[] {
 				"T_Report", "T_ReportStatement", "AD_Attribute_Value", "AD_PInstance_Log", "A_Valid_Asset_Combinations"
+				// FIXME: workaround to avoid errors related to Asset tables
+				, "A_Asset_Addition", "A_Asset_Split"
 		}));
 
 		if ( tablesIgnored.contains(currentNode.tableName) )
