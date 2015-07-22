@@ -137,9 +137,9 @@ public class VDelete extends CPanel
 				+ " AND t.TableName NOT IN ('C_TaxDeclarationAcct',?)"     // not the same table
 				+ " AND ("
 				+ "(c.ColumnName=? AND c.IsKey='N' AND c.ColumnSQL IS NULL)"		//	#1 - direct
-			+ " OR "
-				+ "c.AD_Reference_Value_ID IN "				//	Table Reference
 				// FIXME: workaround to avoid errors related to Asset tables
+//			+ " OR "
+//				+ "c.AD_Reference_Value_ID IN "				//	Table Reference
 //					+ "(SELECT rt.AD_Reference_ID FROM AD_Ref_Table rt"
 //					+ " INNER JOIN AD_Table tt ON (rt.AD_Table_ID=tt.AD_Table_ID)" +
 //							" WHERE tt.TableName = ? ) "	//	#2
