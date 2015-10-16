@@ -15,13 +15,10 @@ package de.action42.idempiere.deleteEntities.factory;
 
 import java.util.logging.Level;
 
-import org.adempiere.base.equinox.EquinoxExtensionLocator;
 import org.adempiere.webui.factory.IFormFactory;
 import org.adempiere.webui.panel.ADForm;
 import org.adempiere.webui.panel.IFormController;
-import org.adempiere.webui.util.ADClassNameMap;
 import org.compiere.util.CLogger;
-import org.zkoss.zk.ui.Component;
 
 /**
  * @author a42niem

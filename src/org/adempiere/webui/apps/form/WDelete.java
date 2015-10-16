@@ -226,7 +226,7 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 		String sql = "SELECT t.TableName, c.ColumnName, c.IsMandatory "
 			+ "FROM AD_Table t"
 			+ " INNER JOIN AD_Column c ON (t.AD_Table_ID=c.AD_Table_ID) "
-			+ "WHERE t.IsView='N'"
+			+ "WHERE t.IsView='N' AND t.IsActive='Y'"
 			+ " AND c.ColumnName NOT IN ('CreatedBy', 'UpdatedBy') "
 				+ " AND t.TableName NOT IN ('C_TaxDeclarationAcct',?)"     // not the same table
 				+ " AND ("
@@ -285,7 +285,6 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 			DB.close(rs, pstmt);
 		}		
 
-		@SuppressWarnings("unchecked")
 		Collection<Treeitem> collItemChild = (Collection<Treeitem>) ItemChildren.getItems();
 		Iterator<Treeitem> it = collItemChild.iterator();
 		
@@ -352,7 +351,6 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 				String errorMsg = "";
 				try 
 				{
-					@SuppressWarnings("unchecked")
 					Collection<Treeitem> items = tree.getItems();	
 					Iterator<Treeitem> nodes = items.iterator();
 					
@@ -389,7 +387,7 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 				}
 				
 			FDialog.info(form.getWindowNo(), form, "DeleteSuccess", "Records deleted:" + " #" + m_totalCount);
-			dispose();
+			//dispose();
 			
 			}
 		}		

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<idempiere Name="de.action42.idempiere.deleteEntities" Version="2.1.0" idempiereVersion="" DataBaseVersion="" Description="" Author="" AuthorEmail="" CreatedDate="2015-10-16 12:34:44.789" UpdatedDate="2015-10-16 12:34:44.789" PackOutVersion="100" UpdateDictionary="false" Client="0-SYSTEM-System" AD_Client_UU="11237b53-9592-4af1-b3c5-afd216514b5d">
+    <AD_Menu type="table">
+        <Parent_ID reference="id">159</Parent_ID>
+        <SeqNo>6</SeqNo>
+        <AD_Menu_ID>53671</AD_Menu_ID>
+        <AD_Client_ID>0</AD_Client_ID>
+        <AD_Org_ID>0</AD_Org_ID>
+        <AD_Menu_ID>53671</AD_Menu_ID>
+        <Name>Cascade Delete Entitites</Name>
+        <Description>You can select document tables and delete all the client related children to that table - useful for cleaning test data before going live</Description>
+        <Action>X</Action>
+        <AD_Window_ID reference="id"/>
+        <AD_Workflow_ID reference="id"/>
+        <AD_Task_ID reference="id"/>
+        <IsActive>Y</IsActive>
+        <IsSummary>N</IsSummary>
+        <AD_Process_ID reference="id"/>
+        <IsSOTrx>N</IsSOTrx>
+        <AD_Form_ID reference="id">53039</AD_Form_ID>
+        <IsReadOnly>N</IsReadOnly>
+        <EntityType>U</EntityType>
+        <IsCentrallyMaintained>Y</IsCentrallyMaintained>
+        <AD_Menu_UU>6b12dae2-f436-491d-ad2c-bfa570953794</AD_Menu_UU>
+        <AD_InfoWindow_ID reference="id"/>
+        <AD_Menu_Trl type="translation">
+            <Name>Borra Entidades en Cascada</Name>
+            <Description>Puede seleccionar tablas de documentos y borrar toda la información relacionada del cliente - útil para borrar datos de prueba antes de salir a producción</Description>
+            <AD_Language>es_CO</AD_Language>
+            <IsActive>Y</IsActive>
+            <IsTranslated>Y</IsTranslated>
+        </AD_Menu_Trl>
+        <AD_Form type="table">
+            <AD_Form_ID>53039</AD_Form_ID>
+            <AD_Client_ID>0</AD_Client_ID>
+            <AD_Org_ID>0</AD_Org_ID>
+            <AD_Form_ID>53039</AD_Form_ID>
+            <IsActive>Y</IsActive>
+            <Name>Cascade Delete Entitites</Name>
+            <Description>You can select document tables and delete all the client related children to that table - useful for cleaning test data before going live</Description>
+            <Help/>
+            <Classname>org.compiere.apps.form.VDelete</Classname>
+            <AccessLevel>4</AccessLevel>
+            <EntityType>U</EntityType>
+            <IsBetaFunctionality>N</IsBetaFunctionality>
+            <JSPURL/>
+            <AD_Form_UU>ba5c6a95-b5db-4ac1-8d78-57b1b541ca23</AD_Form_UU>
+            <AD_CtxHelp_ID reference="id"/>
+            <AD_Form_Trl type="translation">
+                <Help/>
+                <Description>Puede seleccionar tablas de documentos y borrar toda la información relacionada del cliente - útil para borrar datos de prueba antes de salir a producción</Description>
+                <Name>Borra Entidades en Cascada</Name>
+                <AD_Language>es_CO</AD_Language>
+                <IsActive>Y</IsActive>
+                <IsTranslated>Y</IsTranslated>
+            </AD_Form_Trl>
+        </AD_Form>
+    </AD_Menu>
+    <AD_Message type="table">
+        <AD_Client_ID>0</AD_Client_ID>
+        <AD_Org_ID>0</AD_Org_ID>
+        <MsgType>I</MsgType>
+        <MsgText>Records Successfully Deleted</MsgText>
+        <MsgTip/>
+        <IsActive>Y</IsActive>
+        <Value>DeleteSuccess</Value>
+        <EntityType>U</EntityType>
+        <AD_Message_UU>9f60cb46-955a-4b6c-bc4f-7a39811a23ac</AD_Message_UU>
+        <AD_Message_Trl type="translation">
+            <MsgText>Registros borrados exitosamente</MsgText>
+            <MsgTip/>
+            <AD_Language>es_CO</AD_Language>
+            <IsActive>Y</IsActive>
+            <IsTranslated>Y</IsTranslated>
+        </AD_Message_Trl>
+    </AD_Message>
+</idempiere>
