@@ -41,6 +41,7 @@ import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
+import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
@@ -76,7 +77,6 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 		}
 		catch(Exception e)
 		{
-			System.out.println(e);
 			log.log(Level.SEVERE, "", e);
 		}
 	}
@@ -104,7 +104,9 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 	Set<Treeitem> setOfItemSelected = null;
 	List<Treeitem> prevSelectedCol = new ArrayList<Treeitem>();
 	private Trx m_trx;
-	private int m_totalCount;
+	private int m_totalTable;
+	private int m_totalDelete;
+	private int m_totalUpdate;
 	private Integer clientId;
 	public HashMap<String, Integer> clientMap = new HashMap<String, Integer>();
 	
@@ -196,7 +198,7 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 		} 
 		catch (SQLException e) 
 		{
-			System.out.println(e);
+			log.log(Level.SEVERE, "", e);
 		} 
 		finally 
 		{
@@ -290,7 +292,7 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 		
 		while ( it.hasNext() )
 		{
-			Treeitem node = (Treeitem) it.next();
+			Treeitem node = it.next();
 			Treeitem rootOfNode = node.getParentItem();
 			if ( rootOfNode != null && rootOfNode.getParentItem() != null &&  rootOfNode.getParentItem().equals(node))
 			{
@@ -322,7 +324,7 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 		}
 		
 		else if (e.getTarget().equals(clientPick)) {
-			 
+
 			String clientIDStr = clientPick.getSelectedItem().getLabel();
 			clientId = clientMap.get(clientIDStr);
 			
@@ -346,9 +348,12 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 			}
 			else
 			{
-				m_totalCount = 0;
+				m_totalTable = 0;
+				m_totalDelete = 0;
+				m_totalUpdate = 0;
 				m_trx = Trx.get(Trx.createTrxName("delete"), true);
 				String errorMsg = "";
+				StringBuilder logMsg = new StringBuilder();
 				try 
 				{
 					Collection<Treeitem> items = tree.getItems();	
@@ -358,13 +363,28 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 					
 					while ( nodes.hasNext() )
 					{
-						stack.push((DeleteEntitiesModel) (((Treeitem) nodes.next()).getValue()));
+						stack.push((DeleteEntitiesModel) (nodes.next().getValue()));
 					}
 					
 					while ( !stack.empty() )
 					{
-						DeleteEntitiesModel tableData = (DeleteEntitiesModel) stack.pop();
-						m_totalCount += tableData.delete(m_trx);
+						DeleteEntitiesModel tableData = stack.pop();
+						int cnt;
+						if (tableData.mandatoryLink) {
+							cnt = tableData.delete(m_trx);
+							if (cnt > 0) {
+								m_totalDelete += cnt;
+								m_totalTable++;
+								logMsg.append(tableData.tableName).append(" -").append(cnt).append("<br>");
+							}
+						} else {
+							cnt = tableData.update(m_trx);
+							if (cnt > 0) {
+								m_totalUpdate += cnt;
+								m_totalTable++;
+								logMsg.append(tableData.tableName).append(" =").append(cnt).append("<br>");
+							}
+						}
 					}
 					if  ( commit )
 						m_trx.commit(true);
@@ -375,20 +395,33 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 				{
 					errorMsg = ex.getLocalizedMessage();
 					log.log(Level.WARNING, "Cascade delete failed.", ex);
-					m_totalCount = 0;
+					m_totalDelete = 0;
+					m_totalUpdate = 0;
 					m_trx.rollback();
-					FDialog.error(form.getWindowNo(), "DeleteError", 
-							errorMsg);
-						return;
+					FDialog.error(form.getWindowNo(), "DeleteError", errorMsg);
+					return;
 				}
 				finally 
 				{
 					m_trx.close();
 				}
-				
-			FDialog.info(form.getWindowNo(), form, "DeleteSuccess", "Records deleted:" + " #" + m_totalCount);
-			//dispose();
-			
+				logMsg.insert(0,
+					new StringBuilder()
+						.append(" @AD_Table_ID@: #")
+						.append(m_totalTable)
+						.append(" @Updated@: #")
+						.append(m_totalUpdate)
+						.append(" @Deleted@: #")
+						.append(m_totalDelete)
+						.append("<br><br>"));
+
+				FDialog.info(form.getWindowNo(), form, commit ? "DeleteSuccess" : "Test",
+						Msg.parseTranslation(Env.getCtx(), logMsg.toString()));
+
+				Object value=tablePick.getValue();
+				generateTree(value,clientId);
+				//dispose();
+
 			}
 		}		
 	}	// onEvent
@@ -414,57 +447,7 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 		//Integer clientId = clientMap.get(clientIDStr);
 		
 		log.config(name + "=" + value);
-		
-	/*	Integer selectedTableID ;		
-		log.config(name + "=" + value);
-		if (value == null)
-			return;
-		
-		else if (name.equals("AD_Table_ID"))
-		{
-			selectedTableID = ((Integer) value).intValue();
 
-			if (selectedTableID == 0 || clientId == null)
-			{
-				FDialog.error(form.getWindowNo(), "ParameterError", "Table or Client cannot be Null.");
-				return;
-			}
-			
-			MTable table = MTable.get(Env.getCtx(), selectedTableID);
-			
-			DeleteEntitiesModel data = new DeleteEntitiesModel();
-			data.mandatoryLink = true;
-			data.tableName = table.getTableName();
-			data.joinColumn = table.getKeyColumns()[0];
-			data.whereClause = " " + data.tableName + ".AD_Client_ID = " + clientId;
-			if ( table.getTableName().equals("AD_User"))
-			{
-				data.whereClause = data.whereClause + 
-				" AND NOT EXISTS (SELECT * FROM C_BPartner bp " +
-				"WHERE AD_User.Link_BPartner_ID=bp.C_BPartner_ID " +
-				"AND (bp.IsEmployee='Y' OR bp.IsSalesRep='Y'))";
-			}
-			
-			tree.clear();
-			if((tree.getChildren()).size() > 1)
-			{
-				@SuppressWarnings("rawtypes")
-				List treePreviousChild = tree.getChildren();
-				tree.removeChild((Treechildren) treePreviousChild.get(1));
-			}
-			
-			Treechildren rootTreeChild = new Treechildren();				
-			Treeitem rootTreeItem = new Treeitem();
-			rootTreeItem.setValue(data);
-			rootTreeItem.setLabel(data.tableName+"."+data.joinColumn);
-			
-			Treechildren rootTreeItemChild = new Treechildren();
-			createNodes(data, rootTreeItemChild);
-			
-			rootTreeItem.appendChild(rootTreeItemChild);		
-			rootTreeChild.appendChild(rootTreeItem);
-			tree.appendChild(rootTreeChild);*/
-		
 		if (name.equals("AD_Table_ID")) {
 			
 			generateTree(value,clientId);
@@ -500,8 +483,7 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 		tree.clear();
 		if((tree.getChildren()).size() > 1) {
 			
-			@SuppressWarnings("rawtypes")
-			List treePreviousChild = tree.getChildren();
+			List<Component> treePreviousChild = tree.getChildren();
 			tree.removeChild((Treechildren) treePreviousChild.get(1));
 		}
 		

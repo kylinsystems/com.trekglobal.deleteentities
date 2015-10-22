@@ -23,26 +23,19 @@ public class DeleteEntitiesModel {
 	}
 
 	public int delete(Trx m_trx) {
-		String sql;
-		if ( mandatoryLink )
-		{
-			sql = "DELETE FROM " + tableName
-			+ " WHERE " + whereClause;
-
-			//log.log(Level.FINE, "Deleting: " + sql);
-		}
-		else
-		{
-			sql = "UPDATE " + tableName + " SET " + joinColumn + " = NULL "
-			+ " WHERE " + whereClause;
-			
-
-			//log.log(Level.FINE, "Updating: " + sql);
-		}	
-		
+		String sql = "DELETE FROM " + tableName + " WHERE " + whereClause;
+		//log.log(Level.FINE, "Deleting: " + sql);
 		int count = DB.executeUpdateEx(sql, m_trx.getTrxName());
 		//log.log(Level.FINE, (mandatoryLink ? "Deleted: " : "Updated: ") + count + " FROM " + tableName);
+		return count;
+	}
 	
+	public int update(Trx m_trx) {
+		String sql = "UPDATE " + tableName + " SET " + joinColumn + " = NULL "
+			+ " WHERE " + whereClause;
+		//log.log(Level.FINE, "Updating: " + sql);
+		int count = DB.executeUpdateEx(sql, m_trx.getTrxName());
+		//log.log(Level.FINE, (mandatoryLink ? "Deleted: " : "Updated: ") + count + " FROM " + tableName);
 		return count;
 	}
 	
