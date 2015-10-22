@@ -2,9 +2,9 @@
 <?xml-stylesheet type="text/css" href="idempiereDocument.css"?>
 
 <idempiereDocument>
-    <header>de.action42.idempiere.deleteEntities Package Description</header>
+    <header>com.trekglobal.deleteEntities Package Description</header>
     <H1>Package Name:</H1>
-    <packagename>de.action42.idempiere.deleteEntities</packagename>
+    <packagename>com.trekglobal.deleteEntities</packagename>
     <H1>Author:</H1>
     <Name:/>
     <H1>Email Address:</H1>

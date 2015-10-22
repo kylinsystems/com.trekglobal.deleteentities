@@ -1,6 +1,6 @@
 /******************************************************************************
- * Copyright (C) 2015 Dirk Niemeyer                                            *
- * Copyright (C) 2015 action 42 GmbH                 							  *
+ * Copyright (C) 2015 Dirk Niemeyer                                           *
+ * Copyright (C) 2015 action 42 GmbH                 						  *
  * This program is free software; you can redistribute it and/or modify it    *
  * under the terms version 2 of the GNU General Public License as published   *
  * by the Free Software Foundation. This program is distributed in the hope   *
@@ -11,7 +11,7 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,    *
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.                     *
  *****************************************************************************/
-package de.action42.idempiere.deleteEntities.factory;
+package com.trekglobal.deleteEntities.factory;
 
 import java.util.logging.Level;
 

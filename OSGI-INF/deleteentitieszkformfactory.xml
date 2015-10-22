@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0" enabled="true" name="de.action42.idempiere.deleteEntitiesZk">
-   <implementation class="de.action42.idempiere.deleteEntities.factory.MyZkFormFactory"/>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0" enabled="true" name="com.trekglobal.deleteEntities.factory.MyZkFormFactory">
+   <implementation class="com.trekglobal.deleteEntities.factory.MyZkFormFactory"/>
    <property name="service.ranking" type="Integer" value="10"/>
    <service>
       <provide interface="org.adempiere.webui.factory.IFormFactory"/>
