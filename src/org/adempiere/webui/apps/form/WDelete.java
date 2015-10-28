@@ -3,14 +3,10 @@ package org.adempiere.webui.apps.form;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.Stack;
 import java.util.logging.Level;
 
@@ -51,12 +47,10 @@ import org.zkoss.zul.Checkbox;
 import org.zkoss.zul.North;
 import org.zkoss.zul.South;
 import org.zkoss.zul.Tree;
-import org.zkoss.zul.Treecell;
 import org.zkoss.zul.Treechildren;
 import org.zkoss.zul.Treecol;
 import org.zkoss.zul.Treecols;
 import org.zkoss.zul.Treeitem;
-import org.zkoss.zul.Treerow;
 
 
 public class WDelete implements IFormController,EventListener<Event>, ValueChangeListener{
@@ -93,22 +87,18 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 	private Label tableLabel = new Label();
 	private WTableDirEditor tablePick = null;
 	private Combobox clientPick = null;
-	private int ad_table_id = 114 ;
-	public Tree tree ;
-	public Treecols treeCols;
-	public Treecol treeCol;
-	public Treecol treeCol2;
-	public Checkbox dryRun ;
-	public Treerow treeRow ;
-	public Treecell treeCell ;
-	Set<Treeitem> setOfItemSelected = null;
-	List<Treeitem> prevSelectedCol = new ArrayList<Treeitem>();
+	private static final int AD_COLUMN_AD_TABLE_ID = 114;
+	private Tree tree;
+	private Treecols treeCols;
+	private Treecol treeCol;
+	private Treecol treeCol2;
+	private Checkbox dryRun ;
 	private Trx m_trx;
 	private int m_totalTable;
 	private int m_totalDelete;
 	private int m_totalUpdate;
 	private Integer clientId;
-	public HashMap<String, Integer> clientMap = new HashMap<String, Integer>();
+	private HashMap<String, Integer> clientMap = new HashMap<String, Integer>();
 	
 	private void zkInit() throws Exception
 	{
@@ -207,73 +197,64 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 		}
 
 		// Table Pick
-		MLookup lookupTable = MLookupFactory.get(Env.getCtx(), form.getWindowNo(), 0, ad_table_id, DisplayType.TableDir);
+		MLookup lookupTable = MLookupFactory.get(Env.getCtx(), form.getWindowNo(), AD_COLUMN_AD_TABLE_ID, DisplayType.TableDir,
+				Env.getLanguage(Env.getCtx()), "AD_Table_ID", 0,
+				false, "AD_Table.IsView='N' AND AD_Table.AccessLevel!='4'");
 		tablePick = new WTableDirEditor("AD_Table_ID", true, false, true, lookupTable);
-		tablePick.setValue(new Integer((Integer) Env.getContextAsInt(Env.getCtx(), "$AD_Table_ID")));
+		tablePick.setValue(new Integer((Integer) Env.getContextAsInt(Env.getCtx(), "$AD_Table_ID")));  // TODO: What's this???
 		tablePick.addValueChangeListener(this);
 	}   //  dynInit
 	
 	
 	
-	private void createNodes(DeleteEntitiesModel tableData, Treechildren ItemChildren) 
+	private void createNodes(DeleteEntitiesModel tableData, Treechildren itemChildren) 
 	{
 		DeleteEntitiesModel currentNode = tableData;
-		HashSet<String> tablesIgnored = new HashSet<String>(Arrays.asList(new String[] {
-				"T_Report", "T_ReportStatement", "AD_Attribute_Value", "AD_PInstance_Log", "A_Valid_Asset_Combinations"
-		}));
 
-		if ( tablesIgnored.contains(currentNode.tableName) )
-			return;
-
-		String sql = "SELECT t.TableName, c.ColumnName, c.IsMandatory "
+		String sql = "SELECT t.TableName, c.ColumnName, c.IsMandatory, t.AD_Table_ID "
 			+ "FROM AD_Table t"
 			+ " INNER JOIN AD_Column c ON (t.AD_Table_ID=c.AD_Table_ID) "
 			+ "WHERE t.IsView='N' AND t.IsActive='Y'"
 			+ " AND c.ColumnName NOT IN ('CreatedBy', 'UpdatedBy') "
-				+ " AND t.TableName NOT IN ('C_TaxDeclarationAcct',?)"     // not the same table
-				+ " AND ("
-				+ "(c.ColumnName=? AND c.IsKey='N' AND c.ColumnSQL IS NULL)"		//	#1 - direct
-				// FIXME: workaround to avoid errors related to Asset tables
-//			+ " OR "
-//				+ "c.AD_Reference_Value_ID IN "				//	Table Reference
-//					+ "(SELECT rt.AD_Reference_ID FROM AD_Ref_Table rt"
-//					+ " INNER JOIN AD_Table tt ON (rt.AD_Table_ID=tt.AD_Table_ID)" +
-//							" WHERE tt.TableName = ? ) "	//	#2
-			+ ") "
+				+ " AND t.TableName!=?"     // not the same table
+				+ " AND c.ColumnName=?" 	//	#1 - direct
+				+ " AND c.IsKey='N' AND c.ColumnSQL IS NULL "
 			+ "ORDER BY t.LoadSeq DESC";
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 
-		String keyCol = currentNode.tableName + "_ID";
+		String keyCol = currentNode.getTableName() + "_ID";
 		try
 		{
 			pstmt = DB.prepareStatement(sql, null);
-			pstmt.setString(1, currentNode.tableName);
+			pstmt.setString(1, currentNode.getTableName());
 			pstmt.setString(2, keyCol);
-//			pstmt.setString(3, currentNode.tableName);
 			rs = pstmt.executeQuery();
-			
+
 			while (rs.next())
 			{
-				DeleteEntitiesModel data = new DeleteEntitiesModel();
-				data.mandatoryLink = "Y".equals(rs.getString(3));
-				data.tableName = rs.getString(1);
-				data.joinColumn = rs.getString(2);
-				data.whereClause = " EXISTS (SELECT 1 FROM " + currentNode.tableName 
-						+ " WHERE " + currentNode.tableName + "." + currentNode.tableName + "_ID" // + currentNode.joinColumn 
-						+ " = " + data.tableName + "." + data.joinColumn + " AND " + currentNode.whereClause + ") ";
-				
-				int count = data.getCount();
+				String tableName = rs.getString(1);
+				String columnName = rs.getString(2);
+				boolean isMandatory = "Y".equals(rs.getString(3));
+				int tableId = rs.getInt(4);
 
+				DeleteEntitiesModel data = new DeleteEntitiesModel(tableName, isMandatory, clientId);
+				data.setJoinColumn(columnName);
+				data.setWhereClause(" EXISTS (SELECT 1 FROM " + currentNode.getTableName() 
+						+ " WHERE " + currentNode.getTableName() + "." + currentNode.getTableName() + "_ID" // + currentNode.getJoinColumn() 
+						+ "=" + data.getTableName() + "." + data.getJoinColumn() + " AND " + currentNode.getWhereClause() + ") ");
+
+				int count = data.getCount();
 				if ( count > 0 )
 				{						
-						Treeitem treeitem = new Treeitem();
-						ItemChildren.appendChild(treeitem);
-			            treeitem.setLabel(data.tableName+"."+data.joinColumn);	
-			            treeitem.setValue(data);			            
+					Treeitem treeitem = new Treeitem();
+					itemChildren.appendChild(treeitem);
+					boolean isTrxWin = isTrxWin(tableId);
+					treeitem.setLabel(data.getTableName()/*+"."+data.getJoinColumn()*/+" ("+count+")" + (isTrxWin ? " $" : ""));
+					treeitem.setValue(data);			            
 				}
 				else
-					log.log(Level.FINE, "No records:" + data.tableName);
+					log.log(Level.FINE, "No records:" + data.getTableName());
 			}
 			
 		} 
@@ -287,7 +268,7 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 			DB.close(rs, pstmt);
 		}		
 
-		Collection<Treeitem> collItemChild = (Collection<Treeitem>) ItemChildren.getItems();
+		Collection<Treeitem> collItemChild = (Collection<Treeitem>) itemChildren.getItems();
 		Iterator<Treeitem> it = collItemChild.iterator();
 		
 		while ( it.hasNext() )
@@ -299,7 +280,7 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 				log.log(Level.WARNING, "Loop detected, escaping.");
 				break;
 			}
-			else if ( ((DeleteEntitiesModel) node.getValue()).mandatoryLink )
+			else if ( ((DeleteEntitiesModel) node.getValue()).isMandatoryLink() )
 			{	
 				DeleteEntitiesModel itemTableData = (DeleteEntitiesModel) node.getValue();
 				Treechildren nodeChild = new Treechildren();
@@ -370,19 +351,19 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 					{
 						DeleteEntitiesModel tableData = stack.pop();
 						int cnt;
-						if (tableData.mandatoryLink) {
+						if (tableData.isMandatoryLink()) {
 							cnt = tableData.delete(m_trx);
 							if (cnt > 0) {
 								m_totalDelete += cnt;
 								m_totalTable++;
-								logMsg.append(tableData.tableName).append(" -").append(cnt).append("<br>");
+								logMsg.append(tableData.getTableName()).append(" -").append(cnt).append("<br>");
 							}
 						} else {
 							cnt = tableData.update(m_trx);
 							if (cnt > 0) {
 								m_totalUpdate += cnt;
 								m_totalTable++;
-								logMsg.append(tableData.tableName).append(" =").append(cnt).append("<br>");
+								logMsg.append(tableData.getTableName()).append(" =").append(cnt).append("<br>");
 							}
 						}
 					}
@@ -465,20 +446,13 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 			FDialog.error(form.getWindowNo(), "ParameterError", "Table or Client cannot be Null.");
 			return;
 		}
-		
+
 		MTable table = MTable.get(Env.getCtx(), selectedTableID);
-		
-		DeleteEntitiesModel data = new DeleteEntitiesModel();
-		data.mandatoryLink = true;
-		data.tableName = table.getTableName();
-		data.joinColumn = table.getKeyColumns()[0];
-		data.whereClause = " " + data.tableName + ".AD_Client_ID = " + clientId;
-		if ( table.getTableName().equals("AD_User")) {
-			
-			data.whereClause = data.whereClause + " AND NOT EXISTS (SELECT * FROM C_BPartner bp " 
-								+ "WHERE AD_User.Link_BPartner_ID=bp.C_BPartner_ID " 
-								+ "AND (bp.IsEmployee='Y' OR bp.IsSalesRep='Y'))";
-		}
+
+		DeleteEntitiesModel data = new DeleteEntitiesModel(table.getTableName(), true, clientId);
+		if (table.getKeyColumns().length > 0)
+			data.setJoinColumn(table.getKeyColumns()[0]);
+		data.setWhereClause(" " + data.getTableName() + ".AD_Client_ID=?");
 		
 		tree.clear();
 		if((tree.getChildren()).size() > 1) {
@@ -490,7 +464,9 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 		Treechildren rootTreeChild = new Treechildren();				
 		Treeitem rootTreeItem = new Treeitem();
 		rootTreeItem.setValue(data);
-		rootTreeItem.setLabel(data.tableName+"."+data.joinColumn);
+		int count = data.getCount();
+		boolean isTrxWin = isTrxWin(table.getAD_Table_ID());
+		rootTreeItem.setLabel(data.getTableName()/*+"."+data.getJoinColumn()*/+" ("+count+")" + (isTrxWin ? " $" : ""));
 	
 		Treechildren rootTreeItemChild = new Treechildren();
 		createNodes(data, rootTreeItemChild);
@@ -498,6 +474,12 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 		rootTreeItem.appendChild(rootTreeItemChild);		
 		rootTreeChild.appendChild(rootTreeItem);
 		tree.appendChild(rootTreeChild);
+	}
+
+	private boolean isTrxWin(int tableId) {
+		final String sql = "SELECT COUNT(*) FROM AD_Window w JOIN AD_Tab t ON t.AD_Window_ID=w.AD_Window_ID WHERE t.AD_Table_ID=? AND w.WindowType='T' AND t.IsActive='Y' AND w.IsActive='Y'";
+		int cntTrxWin = DB.getSQLValue(null, sql, tableId);
+		return (cntTrxWin > 0);
 	}
 	
 	public ADForm getForm()
