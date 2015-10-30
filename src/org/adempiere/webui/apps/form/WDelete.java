@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Stack;
+import java.util.Vector;
 import java.util.logging.Level;
 
 import org.adempiere.exceptions.AdempiereException;
@@ -17,23 +18,22 @@ import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.Grid;
 import org.adempiere.webui.component.GridFactory;
 import org.adempiere.webui.component.Label;
+import org.adempiere.webui.component.ListModelTable;
+import org.adempiere.webui.component.ListboxFactory;
 import org.adempiere.webui.component.Panel;
 import org.adempiere.webui.component.Row;
 import org.adempiere.webui.component.Rows;
-import org.adempiere.webui.editor.WTableDirEditor;
-import org.adempiere.webui.event.ValueChangeEvent;
-import org.adempiere.webui.event.ValueChangeListener;
+import org.adempiere.webui.component.WListbox;
+import org.adempiere.webui.event.WTableModelEvent;
+import org.adempiere.webui.event.WTableModelListener;
 import org.adempiere.webui.panel.ADForm;
 import org.adempiere.webui.panel.CustomForm;
 import org.adempiere.webui.panel.IFormController;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.window.FDialog;
-import org.compiere.model.MLookup;
-import org.compiere.model.MLookupFactory;
 import org.compiere.model.MTable;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
-import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
@@ -42,25 +42,29 @@ import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Borderlayout;
-import org.zkoss.zul.Center;
 import org.zkoss.zul.Checkbox;
+import org.zkoss.zul.Div;
+import org.zkoss.zul.East;
+import org.zkoss.zul.Hlayout;
 import org.zkoss.zul.North;
 import org.zkoss.zul.South;
 import org.zkoss.zul.Tree;
+import org.zkoss.zul.Treecell;
 import org.zkoss.zul.Treechildren;
 import org.zkoss.zul.Treecol;
 import org.zkoss.zul.Treecols;
 import org.zkoss.zul.Treeitem;
+import org.zkoss.zul.Treerow;
+import org.zkoss.zul.West;
 
 
-public class WDelete implements IFormController,EventListener<Event>, ValueChangeListener{
-	
+public class WDelete implements IFormController,EventListener<Event>, WTableModelListener {
 	/**
-	 *  
+	 *
 	 */
 	private static CLogger log = CLogger.getCLogger(WDelete.class);
 	private CustomForm form = new CustomForm();
-	
+
 	public WDelete()
 	{
 		Env.setContext(Env.getCtx(), form.getWindowNo(), "IsSOTrx", "Y");   //  defaults to no
@@ -74,24 +78,23 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 			log.log(Level.SEVERE, "", e);
 		}
 	}
-	
+
 	private Borderlayout mainLayout = new Borderlayout();
 	private Panel parameterPanel = new Panel();
-	private Panel centerPanel = new Panel();
+	private Panel eastPanel = new Panel();
+	private Panel westPanel = new Panel();
 	private Panel southPanel = new Panel();
-	private Grid centerLayout = GridFactory.newGridLayout();
+	private Grid eastLayout = GridFactory.newGridLayout();
+	private Grid westLayout = GridFactory.newGridLayout();
 	private Grid parameterLayout = GridFactory.newGridLayout();
 	private Grid southLayout = GridFactory.newGridLayout();
 	private ConfirmPanel confirmPanel = new ConfirmPanel(true);
 	private Label clientLabel = new Label();
-	private Label tableLabel = new Label();
-	private WTableDirEditor tablePick = null;
 	private Combobox clientPick = null;
-	private static final int AD_COLUMN_AD_TABLE_ID = 114;
 	private Tree tree;
+	private Treechildren rootTreeChild;
 	private Treecols treeCols;
 	private Treecol treeCol;
-	private Treecol treeCol2;
 	private Checkbox dryRun ;
 	private Trx m_trx;
 	private int m_totalTable;
@@ -99,7 +102,11 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 	private int m_totalUpdate;
 	private Integer clientId;
 	private HashMap<String, Integer> clientMap = new HashMap<String, Integer>();
-	
+	private Hlayout statusBar = new Hlayout();
+
+	private WListbox m_tableListbox;
+	private int m_selected;
+
 	private void zkInit() throws Exception
 	{
 		//Form Init()
@@ -107,10 +114,9 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 		mainLayout.setWidth("100%");
 		mainLayout.setHeight("100%");
 		clientLabel.setText(Msg.translate(Env.getCtx(), "AD_Client_ID"));
-		tableLabel.setText(Msg.translate(Env.getCtx(), "AD_Table_ID"));
 		dryRun = new Checkbox("Dry Run");
 		dryRun.setChecked(true);
-		
+
 		parameterPanel.appendChild(parameterLayout);
 		North north = new North();
 		north.setStyle("border: none");
@@ -118,52 +124,58 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 		north.appendChild(parameterPanel);
 		Rows rows = null;
 		Row row = null;
-		parameterLayout.setWidth("100%");		
+		parameterLayout.setWidth("100%");
 		rows = parameterLayout.newRows();
 		row = rows.newRow();
 		row.appendChild(clientLabel.rightAlign());
 		clientPick.setHflex("true");
 		row.appendChild(clientPick);
-		row.appendChild(tableLabel.rightAlign());
-		tablePick.getComponent().setHflex("true");
-		row.appendChild(tablePick.getComponent());
 		row.appendChild(dryRun);
-		
-		centerPanel.appendChild(centerLayout);
-		centerLayout.setWidth("100%");			
-		Center center = new Center();
-		mainLayout.appendChild(center);
-		center.setStyle("border: none");
-		center.appendChild(centerPanel);
+
+		westPanel.appendChild(westLayout);
+		West west = new West();
+		west.setWidth("50%");
+		mainLayout.appendChild(west);
+		west.setStyle("border: none");
+		west.appendChild(westPanel);
+		m_tableListbox.setWidth("100%");
+		westPanel.appendChild(m_tableListbox);
+        west.setAutoscroll(true);
+
+		eastPanel.appendChild(eastLayout);
+		East east = new East();
+		east.setWidth("50%");
+		mainLayout.appendChild(east);
+		east.setStyle("border: none");
+		east.appendChild(eastPanel);
 		tree = new Tree();
-		tree.setHflex("true");
+		tree.setWidth("100%");
 		treeCols = new Treecols();
 		treeCol = new Treecol("");
-		treeCol2 = new Treecol();
-		centerPanel.appendChild(tree);
+		eastPanel.appendChild(tree);
 		treeCols.appendChild(treeCol);
-		treeCols.appendChild(treeCol2);
-        tree.appendChild(treeCols); 		
-		//center.setFlex(true);
-		center.setAutoscroll(true);
-		
+        tree.appendChild(treeCols);
+        east.setAutoscroll(true);
+
+        rootTreeChild = new Treechildren();
+		tree.appendChild(rootTreeChild);
+
 		South south = new South();
 		south.appendChild(southPanel);
-		southPanel.appendChild(southLayout);		
+		southPanel.appendChild(southLayout);
 		southPanel.setWidth("100%");
 		mainLayout.appendChild(south);
-		Rows rows2 = southLayout.newRows();		
-		Row south_row = rows2.newRow();		
+		Rows rows2 = southLayout.newRows();
+		Row south_row = rows2.newRow();
+		south_row.appendChild(statusBar);
 		south_row.appendChild(confirmPanel);
 		confirmPanel.addActionListener(this);
-		
+
 		clientPick.addEventListener(Events.ON_SELECT, this);
-		
-	} 
-	
+	}
+
 	public void dynInit() throws Exception
 	{
-		
 		// Client Pick
 		String sql = "SELECT AD_Client_ID, Name FROM AD_Client WHERE AD_Client_ID <> 0";
 		clientPick = new Combobox();
@@ -174,10 +186,10 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 		String clientName = null;
 		Integer clientID = null;
 
-		try 
+		try
 		{
 			rs1 = pstmt1.executeQuery();
-			while (rs1.next()) 
+			while (rs1.next())
 			{
 				clientID = new Integer(rs1.getInt(1));
 				clientName = new String(rs1.getString(2));
@@ -185,50 +197,75 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 				clientMap.put(clientName, clientID);
 			}
 
-		} 
-		catch (SQLException e) 
+		}
+		catch (SQLException e)
 		{
 			log.log(Level.SEVERE, "", e);
-		} 
-		finally 
+		}
+		finally
 		{
 			DB.close(rs1);
 			DB.close(pstmt1);
 		}
 
-		// Table Pick
-		MLookup lookupTable = MLookupFactory.get(Env.getCtx(), form.getWindowNo(), AD_COLUMN_AD_TABLE_ID, DisplayType.TableDir,
-				Env.getLanguage(Env.getCtx()), "AD_Table_ID", 0,
-				false, "AD_Table.IsView='N' AND AD_Table.AccessLevel!='4'");
-		tablePick = new WTableDirEditor("AD_Table_ID", true, false, true, lookupTable);
-		tablePick.setValue(new Integer((Integer) Env.getContextAsInt(Env.getCtx(), "$AD_Table_ID")));  // TODO: What's this???
-		tablePick.addValueChangeListener(this);
+		m_tableListbox = ListboxFactory.newDataTable();
 	}   //  dynInit
-	
-	
-	
-	private void createNodes(DeleteEntitiesModel tableData, Treechildren itemChildren) 
+
+
+
+	private void createNodes(DeleteEntitiesModel tableData, Treechildren itemChildren)
 	{
 		DeleteEntitiesModel currentNode = tableData;
 
-		String sql = "SELECT t.TableName, c.ColumnName, c.IsMandatory, t.AD_Table_ID "
-			+ "FROM AD_Table t"
-			+ " INNER JOIN AD_Column c ON (t.AD_Table_ID=c.AD_Table_ID) "
-			+ "WHERE t.IsView='N' AND t.IsActive='Y'"
-			+ " AND c.ColumnName NOT IN ('CreatedBy', 'UpdatedBy') "
-				+ " AND t.TableName!=?"     // not the same table
-				+ " AND c.ColumnName=?" 	//	#1 - direct
-				+ " AND c.IsKey='N' AND c.ColumnSQL IS NULL "
-			+ "ORDER BY t.LoadSeq DESC";
+		final String sql = ""
+				+ "SELECT q.tablename, "
+				+ "       q.columnname, "
+				+ "       q.ismandatory, "
+				+ "       q.ad_table_id "
+				+ "FROM   (SELECT t.ad_table_id, "
+				+ "               t.tablename, "
+				+ "               c.ad_column_id, "
+				+ "               c.columnname, "
+				+ "               r.ad_reference_id, "
+				+ "               r.NAME, "
+				+ "               c.ad_reference_value_id, "
+				+ "               CASE "
+				+ "                 WHEN c.ad_reference_id = 25 THEN 'C_ValidCombination' "
+				+ "                 WHEN c.ad_reference_id = 33 THEN 'S_ResourceAssignment' "
+				+ "                 WHEN c.ad_reference_id = 32 THEN 'AD_Image' "
+				+ "                 WHEN c.ad_reference_id = 21 THEN 'C_Location' "
+				+ "                 WHEN c.ad_reference_id = 31 THEN 'M_Locator' "
+				+ "                 WHEN c.ad_reference_id = 35 THEN 'M_AttributeSetInstance' "
+				+ "                 WHEN c.ad_reference_id = 53370 THEN 'AD_Chart' "
+				+ "                 WHEN c.ad_reference_id = 19 "
+				+ "                       OR ( c.ad_reference_id = 30 "
+				+ "                            AND c.ad_reference_value_id IS NULL ) THEN Cast(Substr(columnname, 1, Length(columnname) - 3) AS VARCHAR(40)) "
+				+ "                 WHEN c.ad_reference_id = 18 "
+				+ "                       OR ( c.ad_reference_id = 30 "
+				+ "                            AND c.ad_reference_value_id IS NOT NULL ) THEN tf.tablename "
+				+ "                 ELSE '?' "
+				+ "               END AS foreigntable, "
+				+ "               c.ismandatory, "
+				+ "               t.loadseq "
+				+ "        FROM   ad_column c "
+				+ "               JOIN ad_table t ON c.ad_table_id = t.ad_table_id "
+				+ "               JOIN ad_reference r ON r.ad_reference_id = c.ad_reference_id "
+				+ "               LEFT JOIN ad_ref_table rt ON c.ad_reference_value_id = rt.ad_reference_id "
+				+ "               LEFT JOIN ad_table tf ON rt.ad_table_id = tf.ad_table_id "
+				+ "        WHERE  c.ad_reference_id IN ( 18, 19, 30, 25, 33, 32, 21, 31, 35, 53370 ) "
+				+ "               AND t.isactive = 'Y' "
+				+ "               AND t.isview = 'N' "
+				+ "               AND c.isactive = 'Y') q "
+				+ "WHERE  q.foreigntable = ? "
+				+ "ORDER  BY q.loadseq DESC";
+
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 
-		String keyCol = currentNode.getTableName() + "_ID";
 		try
 		{
 			pstmt = DB.prepareStatement(sql, null);
 			pstmt.setString(1, currentNode.getTableName());
-			pstmt.setString(2, keyCol);
 			rs = pstmt.executeQuery();
 
 			while (rs.next())
@@ -236,29 +273,27 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 				String tableName = rs.getString(1);
 				String columnName = rs.getString(2);
 				boolean isMandatory = "Y".equals(rs.getString(3));
-				int tableId = rs.getInt(4);
 
 				DeleteEntitiesModel data = new DeleteEntitiesModel(tableName, isMandatory, clientId);
 				data.setJoinColumn(columnName);
-				data.setWhereClause(" EXISTS (SELECT 1 FROM " + currentNode.getTableName() 
-						+ " WHERE " + currentNode.getTableName() + "." + currentNode.getTableName() + "_ID" // + currentNode.getJoinColumn() 
+				data.setWhereClause(" EXISTS (SELECT 1 FROM " + currentNode.getTableName()
+						+ " WHERE " + currentNode.getTableName() + "." + currentNode.getTableName() + "_ID" // + currentNode.getJoinColumn()
 						+ "=" + data.getTableName() + "." + data.getJoinColumn() + " AND " + currentNode.getWhereClause() + ") ");
 
-				int count = data.getCount();
+				int count = getCountFromModel(tableName);
 				if ( count > 0 )
-				{						
+				{
 					Treeitem treeitem = new Treeitem();
 					itemChildren.appendChild(treeitem);
-					boolean isTrxWin = isTrxWin(tableId);
-					treeitem.setLabel(data.getTableName()/*+"."+data.getJoinColumn()*/+" ("+count+")" + (isTrxWin ? " $" : ""));
-					treeitem.setValue(data);			            
+					treeitem.setLabel(data.getTableName()+"."+data.getJoinColumn());
+					treeitem.setValue(data);
 				}
 				else
 					log.log(Level.FINE, "No records:" + data.getTableName());
 			}
-			
-		} 
-		catch (SQLException e) 
+
+		}
+		catch (SQLException e)
 		{
 			log.log(Level.INFO, sql);
 			throw new AdempiereException("Couldn't load child tables", e);
@@ -266,11 +301,11 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 		finally
 		{
 			DB.close(rs, pstmt);
-		}		
+		}
 
 		Collection<Treeitem> collItemChild = (Collection<Treeitem>) itemChildren.getItems();
 		Iterator<Treeitem> it = collItemChild.iterator();
-		
+
 		while ( it.hasNext() )
 		{
 			Treeitem node = it.next();
@@ -281,51 +316,42 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 				break;
 			}
 			else if ( ((DeleteEntitiesModel) node.getValue()).isMandatoryLink() )
-			{	
+			{
 				DeleteEntitiesModel itemTableData = (DeleteEntitiesModel) node.getValue();
 				Treechildren nodeChild = new Treechildren();
 				createNodes(itemTableData, nodeChild);
-				
+
 				if(nodeChild.getItemCount() != 0 )
 				{
 					node.appendChild(nodeChild);
 				}
-			}	
+			}
 		}
-	}	// createNodes(arg1, arg2)	
+	}	// createNodes(arg1, arg2)
 
 	@Override
-	public void onEvent(Event e) throws Exception 
+	public void onEvent(Event e) throws Exception
 	{
 		boolean commit = ! dryRun.isChecked();
-		
+
 		if (e.getTarget().getId().equals(ConfirmPanel.A_CANCEL))
 		{
 			dispose();
 		}
-		
+
 		else if (e.getTarget().equals(clientPick)) {
 
 			String clientIDStr = clientPick.getSelectedItem().getLabel();
 			clientId = clientMap.get(clientIDStr);
-			
-			Object value=tablePick.getValue();
-			generateTree(value,clientId);
+
+			generateTable(clientId);
 		}
 		else if (e.getTarget().getId().equals(ConfirmPanel.A_OK))
 		{
-			//String clientIDStr = clientPick.getText();
-			//Integer clientId = clientMap.get(clientIDStr);
-			
-			Object objTableID = tablePick.getValue();
-			int tableId = 0;
-			if ( objTableID != null )
-				tableId = (Integer) objTableID;
-			
-			if (tableId == 0 || clientId == null)
+			if (clientId == null)
 			{
-				FDialog.error(form.getWindowNo(), "Error", 
-						"Select client and base table for cascade delete.");
+				FDialog.error(form.getWindowNo(), "Error",
+						"Select client for cascade delete.");
 			}
 			else
 			{
@@ -335,18 +361,18 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 				m_trx = Trx.get(Trx.createTrxName("delete"), true);
 				String errorMsg = "";
 				StringBuilder logMsg = new StringBuilder();
-				try 
+				try
 				{
-					Collection<Treeitem> items = tree.getItems();	
+					Collection<Treeitem> items = tree.getItems();
 					Iterator<Treeitem> nodes = items.iterator();
-					
+
 					Stack<DeleteEntitiesModel> stack = new Stack<DeleteEntitiesModel>();
-					
+
 					while ( nodes.hasNext() )
 					{
 						stack.push((DeleteEntitiesModel) (nodes.next().getValue()));
 					}
-					
+
 					while ( !stack.empty() )
 					{
 						DeleteEntitiesModel tableData = stack.pop();
@@ -372,7 +398,7 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 					else
 						m_trx.rollback(true);
 				}
-				catch (Exception ex) 
+				catch (Exception ex)
 				{
 					errorMsg = ex.getLocalizedMessage();
 					log.log(Level.WARNING, "Cascade delete failed.", ex);
@@ -382,7 +408,7 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 					FDialog.error(form.getWindowNo(), "DeleteError", errorMsg);
 					return;
 				}
-				finally 
+				finally
 				{
 					m_trx.close();
 				}
@@ -399,50 +425,25 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 				FDialog.info(form.getWindowNo(), form, commit ? "DeleteSuccess" : "Test",
 						Msg.parseTranslation(Env.getCtx(), logMsg.toString()));
 
-				Object value=tablePick.getValue();
-				generateTree(value,clientId);
+				if (commit) {
+					generateTable(clientId);
+				}
 				//dispose();
-
 			}
-		}		
+		}
 	}	// onEvent
-	
+
 	/**
 	 * Dispose
 	 */
-	
+
 	public void dispose() {
-		
+
 		SessionManager.getAppDesktop().closeActiveWindow();
 	} // dispose
 
-	@Override
-	public void valueChange(ValueChangeEvent e) 
-	{
-		log.info(e.getPropertyName() + "=" + e.getNewValue());
-		
-		String name = e.getPropertyName();
-		Object value = e.getNewValue();
-		
-		//String clientIDStr = clientPick.getText();
-		//Integer clientId = clientMap.get(clientIDStr);
-		
-		log.config(name + "=" + value);
-
-		if (name.equals("AD_Table_ID")) {
-			
-			generateTree(value,clientId);
-		}
-	}	// ValueChange
-	
-	private void generateTree(Object value,Integer clientID) {
-		
-		if (value == null)
-			return;
-		
-		Integer selectedTableID = ((Integer) value).intValue();
-		
-		if (selectedTableID == 0 || clientId == null) {
+	private void generateTree(int selectedTableID, int clientID) {
+		if (selectedTableID <= 0 || clientId <= 0) {
 			FDialog.error(form.getWindowNo(), "ParameterError", "Table or Client cannot be Null.");
 			return;
 		}
@@ -453,27 +454,28 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 		if (table.getKeyColumns().length > 0)
 			data.setJoinColumn(table.getKeyColumns()[0]);
 		data.setWhereClause(" " + data.getTableName() + ".AD_Client_ID=?");
-		
-		tree.clear();
-		if((tree.getChildren()).size() > 1) {
-			
-			List<Component> treePreviousChild = tree.getChildren();
-			tree.removeChild((Treechildren) treePreviousChild.get(1));
-		}
-		
-		Treechildren rootTreeChild = new Treechildren();				
+
+		// Special label for root node (bold)
+		Label nodeLabel = new Label(data.getTableName());
+		nodeLabel.setStyle("font-weight: bold;"); // background-color: #90EE90;");
+		Div div = new Div();
+		div.setStyle("display:inline;");
+		div.appendChild(nodeLabel);
+
 		Treeitem rootTreeItem = new Treeitem();
 		rootTreeItem.setValue(data);
-		int count = data.getCount();
-		boolean isTrxWin = isTrxWin(table.getAD_Table_ID());
-		rootTreeItem.setLabel(data.getTableName()/*+"."+data.getJoinColumn()*/+" ("+count+")" + (isTrxWin ? " $" : ""));
-	
+
+		Treerow treerow = new Treerow();
+		rootTreeItem.appendChild(treerow);				
+		Treecell treecell = new Treecell();
+		treerow.appendChild(treecell);
+		treecell.appendChild(div);
+
 		Treechildren rootTreeItemChild = new Treechildren();
 		createNodes(data, rootTreeItemChild);
-				
-		rootTreeItem.appendChild(rootTreeItemChild);		
+
+		rootTreeItem.appendChild(rootTreeItemChild);
 		rootTreeChild.appendChild(rootTreeItem);
-		tree.appendChild(rootTreeChild);
 	}
 
 	private boolean isTrxWin(int tableId) {
@@ -481,10 +483,132 @@ public class WDelete implements IFormController,EventListener<Event>, ValueChang
 		int cntTrxWin = DB.getSQLValue(null, sql, tableId);
 		return (cntTrxWin > 0);
 	}
-	
+
 	public ADForm getForm()
 	{
 		return form;
+	}
+
+	private void generateTable(int clientId) {
+		tree.clear();
+		if((tree.getChildren()).size() > 1) {
+			List<Component> treePreviousChild = tree.getChildren();
+			tree.removeChild((Treechildren) treePreviousChild.get(1));
+		}
+		tree.appendChild(rootTreeChild);
+		m_selected = 0;
+
+		m_tableListbox.clear();
+		m_tableListbox.getModel().removeTableModelListener(this);
+		//	Header
+		Vector<String> columnNames = new Vector<String>();
+		columnNames.add(Msg.getMsg(Env.getCtx(), "Select"));
+		columnNames.add(Msg.translate(Env.getCtx(), "TableName"));
+		columnNames.add(Msg.translate(Env.getCtx(), "Counter"));
+		columnNames.add(Msg.translate(Env.getCtx(), "TrxName"));
+
+		Vector<Vector<Object>> data = new Vector<Vector<Object>>();
+
+		final String sql = "SELECT TableName, AD_Table_ID FROM AD_Table WHERE IsActive='Y' AND IsView='N' AND AccessLevel!='4' ORDER BY TableName";
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		try
+		{
+			pstmt = DB.prepareStatement(sql, null);
+			rs = pstmt.executeQuery();
+			while (rs.next())
+			{
+				String tableName = rs.getString(1);
+				int tableId = rs.getInt(2);
+				DeleteEntitiesModel dem = new DeleteEntitiesModel(tableName, true, clientId);
+				dem.setWhereClause(" " + tableName + ".AD_Client_ID=?");
+				int cnt = dem.getCount();
+				boolean isTrx = isTrxWin(tableId);
+
+				if (cnt > 0) {
+					Vector<Object> line = new Vector<Object>(4);
+					line.add(new Boolean(false));  //  0-Selection
+					line.add(tableName);	//  TableName
+					line.add(cnt);  		//  Counter
+					line.add(isTrx);  		//  IsTrx
+					data.add(line);
+				}
+			}
+		}
+		catch (SQLException e)
+		{
+			log.log(Level.SEVERE, sql, e);
+		}
+		finally {
+			DB.close(rs, pstmt);
+			rs = null; pstmt = null;
+		}
+
+		//  Table
+		ListModelTable tableModel = new ListModelTable(data);
+		tableModel.addTableModelListener(this);
+		m_tableListbox.setData(tableModel, columnNames);
+		//
+		m_tableListbox.setColumnClass(0, Boolean.class, false);   //  Selection
+		m_tableListbox.setColumnClass(1, String.class, true);   //  TableName
+		m_tableListbox.setColumnClass(2, Integer.class, true);  //  Counter
+		m_tableListbox.setColumnClass(3, Boolean.class, true);  //  IsTrx
+		//
+		m_tableListbox.autoSize();
+		setStatus();
+	}
+
+	private void setStatus() {
+		statusBar.getChildren().clear();
+		statusBar.appendChild(new Label(Msg.getElement(Env.getCtx(), "AD_Table_ID") + ": "+ m_tableListbox.getModel().getSize()+ " / "
+				+ Msg.getMsg(Env.getCtx(), "Selected") + ": "+ m_selected));
+	}
+
+	@Override
+	public void tableChanged(WTableModelEvent e) {
+		int row = e.getFirstRow();
+
+		if (row < 0)
+			return;
+		@SuppressWarnings("unchecked")
+		Vector<Object> data = (Vector<Object>) e.getModel().getElementAt(row);
+		boolean selected = (Boolean) data.get(0);
+		String tableName = (String) data.get(1);
+
+		if (selected) {
+			MTable table = MTable.get(Env.getCtx(), tableName);
+			generateTree(table.getAD_Table_ID(), clientId);
+			m_selected++;
+		} else {
+			removeFromTree(tableName);
+			m_selected--;
+		}
+		setStatus();
+	}
+
+	private void removeFromTree(String tableName) {
+		for (Component co : rootTreeChild.getChildren()) {
+			if (co instanceof Treeitem) {
+				Treeitem ti = (Treeitem) co;
+				DeleteEntitiesModel dem = ti.getValue();
+				if (dem.getTableName().equals(tableName)) {
+					rootTreeChild.removeChild(co);
+					break;
+				}
+			}
+		}
+	}
+
+	private int getCountFromModel(String tableName) {
+		int cnt = 0;
+		for (int i=0; i<m_tableListbox.getModel().getSize(); i++) {
+			String table = (String) m_tableListbox.getModel().getDataAt(i, 1);
+			if (table.equals(tableName)) {
+				cnt = (Integer) m_tableListbox.getModel().getDataAt(i, 2);
+				break;
+			}
+		}
+		return cnt;
 	}
 
 } 	// WDelete
