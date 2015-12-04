@@ -283,10 +283,12 @@ public class WDelete implements IFormController,EventListener<Event>, WTableMode
 				int count = getCountFromModel(tableName);
 				if ( count > 0 )
 				{
-					Treeitem treeitem = new Treeitem();
-					itemChildren.appendChild(treeitem);
-					treeitem.setLabel(data.getTableName()+"."+data.getJoinColumn());
-					treeitem.setValue(data);
+					if (! alreadyOnTree(data.getTableName(), rootTreeChild.getChildren())) {
+						Treeitem treeitem = new Treeitem();
+						itemChildren.appendChild(treeitem);
+						treeitem.setLabel(data.getTableName()+"."+data.getJoinColumn());
+						treeitem.setValue(data);
+					}
 				}
 				else
 					log.log(Level.FINE, "No records:" + data.getTableName());
@@ -328,6 +330,31 @@ public class WDelete implements IFormController,EventListener<Event>, WTableMode
 			}
 		}
 	}	// createNodes(arg1, arg2)
+
+	private boolean alreadyOnTree(String tableName, List<Component> list) {
+		for (Component co : list) {
+			if (co instanceof Treeitem) {
+				Treeitem ti = (Treeitem) co;
+				DeleteEntitiesModel dem = ti.getValue();
+				if (dem.getTableName().equals(tableName)) {
+					return true;
+				}
+				if (ti.getChildren().size() > 0) {
+					if (alreadyOnTree(tableName, ti.getChildren())) {
+						return true;
+					}
+				}
+			} else if (co instanceof Treechildren) {
+				Treechildren tc = (Treechildren) co;
+				if (tc.getChildren().size() > 0) {
+					if (alreadyOnTree(tableName, tc.getChildren())) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
 
 	@Override
 	public void onEvent(Event e) throws Exception
@@ -472,10 +499,10 @@ public class WDelete implements IFormController,EventListener<Event>, WTableMode
 		treecell.appendChild(div);
 
 		Treechildren rootTreeItemChild = new Treechildren();
-		createNodes(data, rootTreeItemChild);
-
 		rootTreeItem.appendChild(rootTreeItemChild);
 		rootTreeChild.appendChild(rootTreeItem);
+
+		createNodes(data, rootTreeItemChild);
 	}
 
 	private boolean isTrxWin(int tableId) {
@@ -490,12 +517,7 @@ public class WDelete implements IFormController,EventListener<Event>, WTableMode
 	}
 
 	private void generateTable(int clientId) {
-		tree.clear();
-		if((tree.getChildren()).size() > 1) {
-			List<Component> treePreviousChild = tree.getChildren();
-			tree.removeChild((Treechildren) treePreviousChild.get(1));
-		}
-		tree.appendChild(rootTreeChild);
+		clearTree();
 		m_selected = 0;
 
 		m_tableListbox.clear();
@@ -558,6 +580,15 @@ public class WDelete implements IFormController,EventListener<Event>, WTableMode
 		setStatus();
 	}
 
+	private void clearTree() {
+		tree.clear();
+		if((tree.getChildren()).size() > 1) {
+			List<Component> treePreviousChild = tree.getChildren();
+			tree.removeChild((Treechildren) treePreviousChild.get(1));
+		}
+		tree.appendChild(rootTreeChild);
+	}
+
 	private void setStatus() {
 		statusBar.getChildren().clear();
 		statusBar.appendChild(new Label(Msg.getElement(Env.getCtx(), "AD_Table_ID") + ": "+ m_tableListbox.getModel().getSize()+ " / "
@@ -570,33 +601,21 @@ public class WDelete implements IFormController,EventListener<Event>, WTableMode
 
 		if (row < 0)
 			return;
-		@SuppressWarnings("unchecked")
-		Vector<Object> data = (Vector<Object>) e.getModel().getElementAt(row);
-		boolean selected = (Boolean) data.get(0);
-		String tableName = (String) data.get(1);
 
-		if (selected) {
-			MTable table = MTable.get(Env.getCtx(), tableName);
-			generateTree(table.getAD_Table_ID(), clientId);
-			m_selected++;
-		} else {
-			removeFromTree(tableName);
-			m_selected--;
-		}
-		setStatus();
-	}
-
-	private void removeFromTree(String tableName) {
-		for (Component co : rootTreeChild.getChildren()) {
-			if (co instanceof Treeitem) {
-				Treeitem ti = (Treeitem) co;
-				DeleteEntitiesModel dem = ti.getValue();
-				if (dem.getTableName().equals(tableName)) {
-					rootTreeChild.removeChild(co);
-					break;
-				}
+		clearTree();
+		m_selected = 0;
+		for (int i = 0; i < e.getModel().getSize(); i++) {
+			@SuppressWarnings("unchecked")
+			Vector<Object> data = (Vector<Object>) e.getModel().getElementAt(i);
+			boolean selected = (Boolean) data.get(0);
+			if (selected) {
+				String tableName = (String) data.get(1);
+				MTable table = MTable.get(Env.getCtx(), tableName);
+				generateTree(table.getAD_Table_ID(), clientId);
+				m_selected++;
 			}
 		}
+		setStatus();
 	}
 
 	private int getCountFromModel(String tableName) {
