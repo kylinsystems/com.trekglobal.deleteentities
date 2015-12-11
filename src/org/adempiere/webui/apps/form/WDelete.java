@@ -82,10 +82,7 @@ public class WDelete implements IFormController,EventListener<Event>, WTableMode
 	private Borderlayout mainLayout = new Borderlayout();
 	private Panel parameterPanel = new Panel();
 	private Panel eastPanel = new Panel();
-	private Panel westPanel = new Panel();
 	private Panel southPanel = new Panel();
-	private Grid eastLayout = GridFactory.newGridLayout();
-	private Grid westLayout = GridFactory.newGridLayout();
 	private Grid parameterLayout = GridFactory.newGridLayout();
 	private Grid southLayout = GridFactory.newGridLayout();
 	private ConfirmPanel confirmPanel = new ConfirmPanel(true);
@@ -132,24 +129,21 @@ public class WDelete implements IFormController,EventListener<Event>, WTableMode
 		row.appendChild(clientPick);
 		row.appendChild(dryRun);
 
-		westPanel.appendChild(westLayout);
 		West west = new West();
 		west.setWidth("50%");
 		mainLayout.appendChild(west);
 		west.setStyle("border: none");
-		west.appendChild(westPanel);
-		m_tableListbox.setWidth("100%");
-		westPanel.appendChild(m_tableListbox);
+		west.appendChild(m_tableListbox);
+		m_tableListbox.setWidth("99%");
         west.setAutoscroll(true);
 
-		eastPanel.appendChild(eastLayout);
 		East east = new East();
 		east.setWidth("50%");
 		mainLayout.appendChild(east);
-		east.setStyle("border: none");
+		east.setStyle("border: 1");
 		east.appendChild(eastPanel);
 		tree = new Tree();
-		tree.setWidth("100%");
+		tree.setWidth("99%");
 		treeCols = new Treecols();
 		treeCol = new Treecol("");
 		eastPanel.appendChild(tree);
@@ -368,10 +362,17 @@ public class WDelete implements IFormController,EventListener<Event>, WTableMode
 
 		else if (e.getTarget().equals(clientPick)) {
 
-			String clientIDStr = clientPick.getSelectedItem().getLabel();
-			clientId = clientMap.get(clientIDStr);
-
-			generateTable(clientId);
+			if (clientPick.getSelectedItem() != null) {
+				String clientIDStr = clientPick.getSelectedItem().getLabel();
+				clientId = clientMap.get(clientIDStr);
+				generateTable(clientId);
+			} else {
+				clearTree();
+				m_selected = 0;
+				m_tableListbox.clear();
+				m_tableListbox.getModel().removeTableModelListener(this);
+				statusBar.getChildren().clear();
+			}
 		}
 		else if (e.getTarget().getId().equals(ConfirmPanel.A_OK))
 		{
