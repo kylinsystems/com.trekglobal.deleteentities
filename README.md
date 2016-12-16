@@ -10,12 +10,14 @@ It is based on code provided by Paul Bowden of ADAXA for ADempiere
 
 ### How do I get set up? ###
 
-TBA
+Just install the plugin - it creates the required dictionary entries automatically
 
 ### Contribution guidelines ###
 
 Please test and provide feedback
 
-### Who do I talk to? ###
+### Contributors ###
 
-a42niem at googlemail dot com
+ADAXA - Paul Bowden - seeder
+a42niem at googlemail dot com - idempierize
+TrekGlobal - Heng Sin Low and Carlos Ruiz - refine for zk and improvements
