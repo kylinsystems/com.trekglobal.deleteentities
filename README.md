@@ -18,6 +18,6 @@ Please test and provide feedback
 
 ### Contributors ###
 
-ADAXA - Paul Bowden - seeder
-a42niem at googlemail dot com - idempierize
-TrekGlobal - Heng Sin Low and Carlos Ruiz - refine for zk and improvements
+* ADAXA - Paul Bowden - seeder
+* a42niem at googlemail dot com - idempierize
+* TrekGlobal - Heng Sin Low and Carlos Ruiz - refine for zk and improvements
