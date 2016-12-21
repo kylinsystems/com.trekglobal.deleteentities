@@ -3,12 +3,20 @@ Bundle-ManifestVersion: 2
 Bundle-Name: CascadeDeleteEntities
 Bundle-SymbolicName: com.trekglobal.deleteEntities;singleton:=true
 Bundle-Version: 2.1.0
-Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Require-Bundle: org.adempiere.base,
  org.adempiere.plugin.utils,
- org.zkoss.zk.library;resolution:=optional,
- org.adempiere.ui.zk;resolution:=optional,
- org.adempiere.ui
+ org.adempiere.ui,
+ org.adempiere.ui.zk;bundle-version="4.1.0",
+ zcommon;bundle-version="0.0.0",
+ zel;bundle-version="0.0.0",
+ zhtml;bundle-version="0.0.0",
+ zk;bundle-version="0.0.0",
+ zkbind;bundle-version="0.0.0",
+ zkplus;bundle-version="0.0.0",
+ zul;bundle-version="0.0.0",
+ zweb;bundle-version="0.0.0" 
 Bundle-ClassPath: .
 Bundle-Activator: org.adempiere.plugin.utils.Incremental2PackActivator
 Service-Component: OSGI-INF/*.xml
+Bundle-ActivationPolicy: lazy
